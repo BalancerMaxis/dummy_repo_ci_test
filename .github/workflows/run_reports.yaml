@@ -9,20 +9,11 @@ on:
       checkout_ref:
         required: true
         type: string
-  pull_request_target:
-    branches:
-      - main
-    paths:
-      - "BIPs/**"
-    types:
-      - opened
-      - reopened
-      - synchronize
 
 jobs:
   generate_reports:
     runs-on: ubuntu-latest
-    environment: ${{ github.event.pull_request.head.repo.full_name != github.repository && 'external_pr' || 'default' }}
+    environment: ${{ github.event.pull_request.head.repo.fork && 'external' || 'internal' }}
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       WEB3_INFURA_PROJECT_ID: ${{ secrets.WEB3_INFURA_PROJECT_ID }}
@@ -37,13 +28,13 @@ jobs:
       TENDERLY_ACCESS_KEY: ${{ secrets.TENDERLY_ACCESS_KEY }}
       TENDERLY_ACCOUNT_NAME: ${{ secrets.TENDERLY_ACCOUNT_NAME }}
       TENDERLY_PROJECT_NAME: ${{ secrets.TENDERLY_PROJECT_NAME }}
-      PR_NUMBER: ${{ inputs.pr_number == '' && github.event.number || inputs.pr_number }}
-      COMMIT_SHA: ${{ inputs.checkout_ref  == '' && github.event.pull_request.head.ref || inputs.checkout_ref }}
+      PR_NUMBER: ${{ inputs.pr_number }}
+      COMMIT_SHA: ${{ inputs.checkout_ref }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.COMMIT_SHA }}
+          ref: ${{ inputs.checkout_ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           fetch-depth: 0
 
@@ -62,11 +53,6 @@ jobs:
 
       - name: Setup Environment
         run: |
-          echo "gh repo owner is ${{ github.repository_owner }}"
-          echo "gh base ref is ${{ github.base_ref }}"
-          echo "gh head ref is ${{ github.head_ref }}"
-          echo "gh ref is ${{ github.ref }}"
-          echo "gh ref is ${{ github.workspace }}"
           cd action-scripts/brownie
           : # https://github.com/yaml/pyyaml/issues/724#issuecomment-1848423837
           pip install "cython<3.0.0" wheel
@@ -113,7 +99,7 @@ jobs:
         with:
           filePath: action-scripts/brownie/validate_bip_results.txt
           reactions: eyes
-          pr_number: ${{ env.PR_NUMBER }}
+          pr_number: ${{ inputs.pr_number }}
 
       - name: Post Payload Report as Comment
         continue-on-error: true
@@ -122,13 +108,13 @@ jobs:
         with:
           filePath: action-scripts/brownie/payload_reports.txt
           reactions: eyes
-          pr_number: ${{ env.PR_NUMBER }}
+          pr_number: ${{ inputs.pr_number }}
 
       - name: Prettify code
         uses: creyD/prettier_action@v4.3
         with:
           # This part is also where you can pass other options, for example:
-          prettier_options: --write BIPs/**/*.json
+          prettier_options: --write BIPs/**/*.json config/*.json MaxiOps/**/*.json
           commit_message: Automated processing of Payload PR (validations, transformations, and reports) + reformat JSON
 
       - name: Commit and push reports
