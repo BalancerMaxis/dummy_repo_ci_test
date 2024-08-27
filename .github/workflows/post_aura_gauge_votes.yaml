@@ -10,6 +10,7 @@ on:
 jobs:
   post_aura_gauge_votes:
     runs-on: ubuntu-latest
+    environment: sensitive
 
     steps:
     - name: Checkout
@@ -25,6 +26,7 @@ jobs:
     - name: Determine week-string
       id: week-string
       run: |
+        echo $SENSITIVE_VAR
         # Get the path of the changed CSV file
         CSV_PATH=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '/input/.*\.csv$' | head -n 1)
         
