@@ -1,4 +1,4 @@
 pandas
 requests
-bal-addresses
+git+https://github.com/BalancerMaxis/bal_addresses@0.9.1
 tabulate
